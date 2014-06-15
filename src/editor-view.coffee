@@ -368,12 +368,14 @@ class EditorView extends View
       false if @isFocused
 
     @overlayer.on 'mousedown', (e) =>
-      @overlayer.hide()
-      clickedElement = document.elementFromPoint(e.pageX, e.pageY)
-      @overlayer.show()
-      e.target = clickedElement
-      $(clickedElement).trigger(e)
-      false if @isFocused
+      switch e.which
+        when 1
+          @overlayer.hide()
+          clickedElement = document.elementFromPoint(e.pageX, e.pageY)
+          @overlayer.show()
+          e.target = clickedElement
+          $(clickedElement).trigger(e)
+          false if @isFocused
 
     @renderedLines.on 'mousedown', '.fold.line', (e) =>
       id = $(e.currentTarget).attr('fold-id')

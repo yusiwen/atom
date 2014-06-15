@@ -469,21 +469,23 @@ EditorComponent = React.createClass
       editor.insertText(char)
 
   onMouseDown: (event) ->
-    {editor} = @props
-    {detail, shiftKey, metaKey} = event
-    screenPosition = @screenPositionForMouseEvent(event)
+    switch event.button
+      when 0
+        {editor} = @props
+        {detail, shiftKey, metaKey} = event
+        screenPosition = @screenPositionForMouseEvent(event)
 
-    if shiftKey
-      editor.selectToScreenPosition(screenPosition)
-    else if metaKey
-      editor.addCursorAtScreenPosition(screenPosition)
-    else
-      editor.setCursorScreenPosition(screenPosition)
-      switch detail
-        when 2 then editor.selectWord()
-        when 3 then editor.selectLine()
+        if shiftKey
+          editor.selectToScreenPosition(screenPosition)
+        else if metaKey
+          editor.addCursorAtScreenPosition(screenPosition)
+        else
+          editor.setCursorScreenPosition(screenPosition)
+          switch detail
+            when 2 then editor.selectWord()
+            when 3 then editor.selectLine()
 
-    @selectToMousePositionUntilMouseUp(event)
+        @selectToMousePositionUntilMouseUp(event)
 
   onStylesheetsChanged: (stylesheet) ->
     @refreshScrollbars() if @containsScrollbarSelector(stylesheet)
