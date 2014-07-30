@@ -227,7 +227,7 @@ class Editor extends Model
     @subscribe @displayBuffer, "character-widths-changed", (changeCount) => @emit 'character-widths-changed', changeCount
 
   getViewClass: ->
-    require './react-editor-view'
+    require './editor-view'
 
   destroyed: ->
     @unsubscribe()
