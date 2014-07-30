@@ -10,6 +10,11 @@ Q = require 'q'
 $ = null # Defer require in case this is in the window-less browser process
 ScopedProperties = require './scoped-properties'
 
+try
+  packagesCache = {} #require('packages.json')
+catch
+  packagesCache = {}
+
 # Loads and activates a package's main module and resources such as
 # stylesheets, keymaps, grammar, editor properties, and menus.
 module.exports =
@@ -19,13 +24,16 @@ class Package
   @stylesheetsDir: 'stylesheets'
 
   @loadMetadata: (packagePath, ignoreErrors=false) ->
-    if metadataPath = CSON.resolve(path.join(packagePath, 'package'))
-      try
-        metadata = CSON.readFileSync(metadataPath)
-      catch error
-        throw error unless ignoreErrors
+    packageName = path.basename(packagePath)
+    metadata = packagesCache[packageName]?.metadata
+    unless metadata?
+      if metadataPath = CSON.resolve(path.join(packagePath, 'package'))
+        try
+          metadata = CSON.readFileSync(metadataPath)
+        catch error
+          throw error unless ignoreErrors
     metadata ?= {}
-    metadata.name = path.basename(packagePath)
+    metadata.name = packageName
     metadata
 
   keymaps: null
@@ -137,10 +145,16 @@ class Package
     @scopedPropertiesActivated = true
 
   loadKeymaps: ->
-    @keymaps = @getKeymapPaths().map (keymapPath) -> [keymapPath, CSON.readFileSync(keymapPath)]
+    if packagesCache[@name]?
+      @keymaps = ([keymapPath, keymapObject] for keymapPath, keymapObject of packagesCache[@name].keymaps)
+    else
+      @keymaps = @getKeymapPaths().map (keymapPath) -> [keymapPath, CSON.readFileSync(keymapPath)]
 
   loadMenus: ->
-    @menus = @getMenuPaths().map (menuPath) -> [menuPath, CSON.readFileSync(menuPath)]
+    if packagesCache[@name]?
+      @menus = ([menuPath, menuObject] for menuPath, menuObject of packagesCache[@name].menus)
+    else
+      @menus = @getMenuPaths().map (menuPath) -> [menuPath, CSON.readFileSync(menuPath)]
 
   getKeymapPaths: ->
     keymapsDirPath = path.join(@path, 'keymaps')

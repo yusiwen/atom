@@ -143,7 +143,8 @@ class PackageManager
     packagePaths = @getAvailablePackagePaths()
     packagePaths = packagePaths.filter (packagePath) => not @isPackageDisabled(path.basename(packagePath))
     packagePaths = _.uniq packagePaths, (packagePath) -> path.basename(packagePath)
-    @loadPackage(packagePath) for packagePath in packagePaths
+    profile "loading packages", =>
+      @loadPackage(packagePath) for packagePath in packagePaths
     @emit 'loaded'
 
   loadPackage: (nameOrPath) ->
@@ -232,9 +233,9 @@ class PackageManager
   getAvailablePackagePaths: ->
     packagePaths = []
 
-    for packageDirPath in @packageDirPaths
-      for packagePath in fs.listSync(packageDirPath)
-        packagePaths.push(packagePath) if fs.isDirectorySync(packagePath)
+    # for packageDirPath in @packageDirPaths
+    #   for packagePath in fs.listSync(packageDirPath)
+    #     packagePaths.push(packagePath) if fs.isDirectorySync(packagePath)
 
     packagesPath = path.join(@resourcePath, 'node_modules')
     for packageName, packageVersion of @getPackageDependencies()
