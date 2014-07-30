@@ -173,10 +173,6 @@ class EditorView extends View
   scrollToCursorPosition: ->
     @editor.scrollToCursorPosition()
 
-  scrollToPixelPosition: (pixelPosition) ->
-    screenPosition = screenPositionForPixelPosition(pixelPosition)
-    @editor.scrollToScreenPosition(screenPosition)
-
   # Public: Converts a buffer position to a pixel position.
   #
   # position - An object that represents a buffer position. It can be either
@@ -323,12 +319,6 @@ class EditorView extends View
   # showInvisibles - A {Boolean} which, if `true`, show invisible characters.
   setShowInvisibles: (showInvisibles) ->
     @component.setShowInvisibles(showInvisibles)
-
-  toggleSoftWrap: ->
-    @editor.toggleSoftWrap()
-
-  toggleSoftTabs: ->
-    @editor.toggleSoftTabs()
 
   getText: ->
     @editor.getText()
