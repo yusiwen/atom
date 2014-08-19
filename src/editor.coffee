@@ -296,7 +296,7 @@ class Editor extends Model
   # Set the number of characters that can be displayed horizontally in the
   # editor.
   #
-  # editorWidthInChars - A {Number} representing the width of the {EditorView}
+  # * `editorWidthInChars` A {Number} representing the width of the {EditorView}
   # in characters.
   setEditorWidthInChars: (editorWidthInChars) ->
     @displayBuffer.setEditorWidthInChars(editorWidthInChars)
@@ -310,7 +310,7 @@ class Editor extends Model
 
   # Public: Enable or disable soft tabs for this editor.
   #
-  # softTabs - A {Boolean}
+  # * `softTabs` A {Boolean}
   setSoftTabs: (@softTabs) -> @softTabs
 
   # Public: Toggle soft tabs for this editor
@@ -321,7 +321,7 @@ class Editor extends Model
 
   # Public: Enable or disable soft wrap for this editor.
   #
-  # softWrap - A {Boolean}
+  # * `softWrap` A {Boolean}
   setSoftWrap: (softWrap) -> @displayBuffer.setSoftWrap(softWrap)
 
   # Public: Toggle soft wrap for this editor
@@ -363,12 +363,16 @@ class Editor extends Model
   # unchanged. If the {Point} does not describe a valid position, the closest
   # valid position is returned instead.
   #
-  # For example:
-  #   * `[-1, -1]` is converted to `[0, 0]`.
-  #   * If the line at row 2 is 10 long, `[2, Infinity]` is converted to
-  #     `[2, 10]`.
+  # ## Examples
   #
-  # bufferPosition - The {Point} representing the position to clip.
+  # ```coffee
+  # editor.clipBufferPosition([-1, -1]) # -> `[0, 0]`
+  #
+  # # When the line at buffer row 2 is 10 characters long
+  # editor.clipBufferPosition([2, Infinity]) # -> `[2, 10]`
+  # ```
+  #
+  # * `bufferPosition` The {Point} representing the position to clip.
   #
   # Returns a {Point}.
   clipBufferPosition: (bufferPosition) -> @buffer.clipPosition(bufferPosition)
@@ -376,7 +380,7 @@ class Editor extends Model
   # Public: Clip the start and end of the given range to valid positions in the
   # buffer. See {::clipBufferPosition} for more information.
   #
-  # range - The {Range} to clip.
+  # * `range` The {Range} to clip.
   #
   # Returns a {Range}.
   clipBufferRange: (range) -> @buffer.clipRange(range)
@@ -388,7 +392,7 @@ class Editor extends Model
   # the tab length is 2, a row with 4 leading spaces would have an indentation
   # level of 2.
   #
-  # bufferRow - A {Number} indicating the buffer row.
+  # * `bufferRow` A {Number} indicating the buffer row.
   #
   # Returns a {Number}.
   indentationForBufferRow: (bufferRow) ->
@@ -401,11 +405,11 @@ class Editor extends Model
   # Note that if soft tabs are enabled and the tab length is 2, a row with 4
   # leading spaces would have an indentation level of 2.
   #
-  # bufferRow - A {Number} indicating the buffer row.
-  # newLevel - A {Number} indicating the new indentation level.
-  # options - An {Object} with the following keys:
-  #   :preserveLeadingWhitespace - true to preserve any whitespace already at
-  #                                the beginning of the line (default: false).
+  # * `bufferRow` A {Number} indicating the buffer row.
+  # * `newLevel` A {Number} indicating the new indentation level.
+  # * `options` An {Object} with the following keys:
+  #   * `preserveLeadingWhitespace` `true` to preserve any whitespace already at
+  #      the beginning of the line (default: false).
   setIndentationForBufferRow: (bufferRow, newLevel, {preserveLeadingWhitespace}={}) ->
     if preserveLeadingWhitespace
       endColumn = 0
@@ -421,7 +425,7 @@ class Editor extends Model
   # the tab length is 2, a row with 4 leading spaces would have an indentation
   # level of 2.
   #
-  # line - A {String} representing a line of text.
+  # * `line` A {String} representing a line of text.
   #
   # Returns a {Number}.
   indentLevelForLine: (line) ->
@@ -444,7 +448,7 @@ class Editor extends Model
   #
   # See {TextBuffer::saveAs} for more details.
   #
-  # filePath - A {String} path.
+  # * `filePath` A {String} path.
   saveAs: (filePath) -> @buffer.saveAs(filePath)
 
   # Copies the current file path to the native clipboard.
@@ -496,8 +500,8 @@ class Editor extends Model
 
   # Returns the range for the given buffer row.
   #
-  # row - A row {Number}.
-  # options - An options hash with an `includeNewline` key.
+  # * `row` A row {Number}.
+  # * `options` An options hash with an `includeNewline` key.
   #
   # Returns a {Range}.
   bufferRangeForBufferRow: (row, {includeNewline}={}) -> @buffer.rangeForRow(row, includeNewline)
@@ -505,13 +509,13 @@ class Editor extends Model
   # Public: Returns a {String} representing the contents of the line at the
   # given buffer row.
   #
-  # row - A {Number} representing a zero-indexed buffer row.
+  # * `row` A {Number} representing a zero-indexed buffer row.
   lineForBufferRow: (row) -> @buffer.lineForRow(row)
 
   # Public: Returns a {Number} representing the line length for the given
   # buffer row, exclusive of its line-ending character(s).
   #
-  # row - A {Number} indicating the buffer row.
+  # * `row` A {Number} indicating the buffer row.
   lineLengthForBufferRow: (row) -> @buffer.lineLengthForRow(row)
 
   # {Delegates to: TextBuffer.scan}
@@ -538,8 +542,8 @@ class Editor extends Model
   # The position is also clipped via {::clipScreenPosition} following the
   # conversion, which only makes a difference when `options` are supplied.
   #
-  # bufferPosition - A {Point} or {Array} of [row, column].
-  # options - An options hash for {::clipScreenPosition}.
+  # * `bufferPosition` A {Point} or {Array} of [row, column].
+  # * `options` An options hash for {::clipScreenPosition}.
   #
   # Returns a {Point}.
   screenPositionForBufferPosition: (bufferPosition, options) -> @displayBuffer.screenPositionForBufferPosition(bufferPosition, options)
@@ -548,8 +552,8 @@ class Editor extends Model
   #
   # The position is clipped via {::clipScreenPosition} prior to the conversion.
   #
-  # bufferPosition - A {Point} or {Array} of [row, column].
-  # options - An options hash for {::clipScreenPosition}.
+  # * `bufferPosition` A {Point} or {Array} of [row, column].
+  # * `options` An options hash for {::clipScreenPosition}.
   #
   # Returns a {Point}.
   bufferPositionForScreenPosition: (screenPosition, options) -> @displayBuffer.bufferPositionForScreenPosition(screenPosition, options)
@@ -571,12 +575,16 @@ class Editor extends Model
   # unchanged. If the {Point} does not describe a valid position, the closest
   # valid position is returned instead.
   #
-  # For example:
-  #   * `[-1, -1]` is converted to `[0, 0]`.
-  #   * If the line at screen row 2 is 10 long, `[2, Infinity]` is converted to
-  #     `[2, 10]`.
+  # ## Examples
   #
-  # bufferPosition - The {Point} representing the position to clip.
+  # ```coffee
+  # editor.clipScreenPosition([-1, -1]) # -> `[0, 0]`
+  #
+  # # When the line at screen row 2 is 10 characters long
+  # editor.clipScreenPosition([2, Infinity]) # -> `[2, 10]`
+  # ```
+  #
+  # * `bufferPosition` The {Point} representing the position to clip.
   #
   # Returns a {Point}.
   clipScreenPosition: (screenPosition, options) -> @displayBuffer.clipScreenPosition(screenPosition, options)
@@ -608,7 +616,7 @@ class Editor extends Model
   # anonymous CoffeeScript function, the method returns the following array:
   # `["source.coffee", "meta.inline.function.coffee", "variable.parameter.function.coffee"]`
   #
-  # bufferPosition - A {Point} or {Array} of [row, column].
+  # * `bufferPosition` A {Point} or {Array} of [row, column].
   #
   # Returns an {Array} of {String}s.
   scopesForBufferPosition: (bufferPosition) -> @displayBuffer.scopesForBufferPosition(bufferPosition)
@@ -637,13 +645,18 @@ class Editor extends Model
 
   # Public: For each selection, replace the selected text with the given text.
   #
-  # Emits: `will-insert-text -> ({text, cancel})` before the text has
-  # been inserted. Calling `cancel` will prevent the text from being
-  # inserted.
-  # Emits: `did-insert-text -> ({text})` after the text has been inserted.
+  # ## Events
   #
-  # text - A {String} representing the text to insert.
-  # options - See {Selection::insertText}.
+  #  * `will-insert-text` Emit before the text has been inserted.
+  #    * `event` event {Object}
+  #      * `text` {String} text to be inserted
+  #      * `cancel` {Function} Call to prevent the text from being inserted
+  #  * `did-insert-text` Emit after the text has been inserted.
+  #    * `event` event {Object}
+  #      * `text` {String} text to be inserted
+  #
+  # * `text` A {String} representing the text to insert.
+  # * `options` See {Selection::insertText}.
   #
   # Returns a {Boolean} indicating whether or not the text was inserted.
   insertText: (text, options={}) ->
@@ -801,7 +814,7 @@ class Editor extends Model
   # editor, each selection will be replaced with the content of the
   # corresponding clipboard selection text.
   #
-  # options - See {Selection::insertText}.
+  # * `options` See {Selection::insertText}.
   pasteText: (options={}) ->
     {text, metadata} = atom.clipboard.readWithMetadata()
 
@@ -858,7 +871,7 @@ class Editor extends Model
 
   # Public: Fold all foldable lines at the given indent level.
   #
-  # level - A {Number}.
+  # * `level` A {Number}.
   foldAllAtIndentLevel: (level) ->
     @languageMode.foldAllAtIndentLevel(level)
 
@@ -868,13 +881,13 @@ class Editor extends Model
   # If the given row is foldable, the fold will begin there. Otherwise, it will
   # begin at the first foldable row preceding the given row.
   #
-  # bufferRow - A {Number}.
+  # * `bufferRow` A {Number}.
   foldBufferRow: (bufferRow) ->
     @languageMode.foldBufferRow(bufferRow)
 
   # Public: Unfold all folds containing the given row in buffer coordinates.
   #
-  # bufferRow - A {Number}
+  # * `bufferRow` A {Number}
   unfoldBufferRow: (bufferRow) ->
     @displayBuffer.unfoldBufferRow(bufferRow)
 
@@ -882,7 +895,7 @@ class Editor extends Model
   #
   # A *foldable* row is a row that *starts* a row range that can be folded.
   #
-  # bufferRow - A {Number}
+  # * `bufferRow` A {Number}
   #
   # Returns a {Boolean}.
   isFoldableAtBufferRow: (bufferRow) ->
@@ -921,7 +934,7 @@ class Editor extends Model
 
   # Public: Determine whether the given row in buffer coordinates is folded.
   #
-  # bufferRow - A {Number}
+  # * `bufferRow` A {Number}
   #
   # Returns a {Boolean}.
   isFoldedAtBufferRow: (bufferRow) ->
@@ -929,7 +942,7 @@ class Editor extends Model
 
   # Public: Determine whether the given row in screen coordinates is folded.
   #
-  # screenRow - A {Number}
+  # * `screenRow` A {Number}
   #
   # Returns a {Boolean}.
   isFoldedAtScreenRow: (screenRow) ->
@@ -1092,7 +1105,7 @@ class Editor extends Model
   # All the changes made inside the given {Function} can be reverted with a
   # single call to {::undo}.
   #
-  # fn - A {Function} that will be called once for each {Selection}. The first
+  # * `fn` A {Function} that will be called once for each {Selection}. The first
   #      argument will be a {Selection} and the second argument will be the
   #      {Number} index of that selection.
   mutateSelectedText: (fn) ->
@@ -1111,8 +1124,8 @@ class Editor extends Model
 
   # Public: Get all the decorations within a screen row range.
   #
-  # startScreenRow - the {Number} beginning screen row
-  # endScreenRow - the {Number} end screen row (inclusive)
+  # * `startScreenRow` the {Number} beginning screen row
+  # * `endScreenRow` the {Number} end screen row (inclusive)
   #
   # Returns an {Object} of decorations in the form
   #  `{1: [{id: 10, type: 'gutter', class: 'someclass'}], 2: ...}`
@@ -1142,20 +1155,20 @@ class Editor extends Model
   #     </div>
   #     ```
   #
-  # marker - A {Marker} you want this decoration to follow.
-  # decorationParams - An {Object} representing the decoration eg. `{type: 'gutter', class: 'linter-error'}`
-  #   :type - There are a few supported decoration types:
+  # * `marker` A {Marker} you want this decoration to follow.
+  # * `decorationParams` An {Object} representing the decoration eg. `{type: 'gutter', class: 'linter-error'}`
+  #   * `type` There are a few supported decoration types:
   #     * `gutter`: Applies the decoration to the line numbers spanned by the marker.
   #     * `line`: Applies the decoration to the lines spanned by the marker.
   #     * `highlight`: Applies the decoration to a "highlight" behind the marked range.
-  #   :class - This CSS class will be applied to the decorated line number,
+  #   * `class` This CSS class will be applied to the decorated line number,
   #     line, or highlight.
-  #   :onlyHead - If `true`, the decoration will only be applied to the head
+  #   * `onlyHead` If `true`, the decoration will only be applied to the head
   #     of the marker. Only applicable to the `line` and `gutter` types.
-  #   :onlyEmpty - If `true`, the decoration will only be applied if the
+  #   * `onlyEmpty` If `true`, the decoration will only be applied if the
   #     associated marker is empty. Only applicable to the `line` and
   #     `gutter` types.
-  #   :onlyNonEmpty - If `true`, the decoration will only be applied if the
+  #   * `onlyNonEmpty` If `true`, the decoration will only be applied if the
   #     associated marker is non-empty.  Only applicable to the `line` and
   #     gutter types.
   #
@@ -1181,25 +1194,25 @@ class Editor extends Model
   # In addition, there are several special properties that will be compared
   # with the range of the markers rather than their properties.
   #
-  # properties - An {Object} containing properties that each returned marker
+  # * `properties` An {Object} containing properties that each returned marker
   #   must satisfy. Markers can be associated with custom properties, which are
   #   compared with basic equality. In addition, several reserved properties
   #   can be used to filter markers based on their current range:
-  #     :startBufferRow - Only include markers starting at this row in buffer
+  #   * `startBufferRow` Only include markers starting at this row in buffer
   #       coordinates.
-  #     :endBufferRow - Only include markers ending at this row in buffer
+  #   * `endBufferRow` Only include markers ending at this row in buffer
   #       coordinates.
-  #     :containsBufferRange - Only include markers containing this {Range} or
+  #   * `containsBufferRange` Only include markers containing this {Range} or
   #       in range-compatible {Array} in buffer coordinates.
-  #     :containsBufferPosition - Only include markers containing this {Point}
+  #   * `containsBufferPosition` Only include markers containing this {Point}
   #       or {Array} of `[row, column]` in buffer coordinates.
   findMarkers: (properties) ->
     @displayBuffer.findMarkers(properties)
 
   # Public: Mark the given range in screen coordinates.
   #
-  # range - A {Range} or range-compatible {Array}.
-  # options - See {TextBuffer::markRange}.
+  # * `range` A {Range} or range-compatible {Array}.
+  # * `options` See {TextBuffer::markRange}.
   #
   # Returns a {DisplayBufferMarker}.
   markScreenRange: (args...) ->
@@ -1207,8 +1220,8 @@ class Editor extends Model
 
   # Public: Mark the given range in buffer coordinates.
   #
-  # range - A {Range} or range-compatible {Array}.
-  # options - See {TextBuffer::markRange}.
+  # * `range` A {Range} or range-compatible {Array}.
+  # * `options` See {TextBuffer::markRange}.
   #
   # Returns a {DisplayBufferMarker}.
   markBufferRange: (args...) ->
@@ -1216,8 +1229,8 @@ class Editor extends Model
 
   # Public: Mark the given position in screen coordinates.
   #
-  # position - A {Point} or {Array} of `[row, column]`.
-  # options - See {TextBuffer::markRange}.
+  # * `position` A {Point} or {Array} of `[row, column]`.
+  # * `options` See {TextBuffer::markRange}.
   #
   # Returns a {DisplayBufferMarker}.
   markScreenPosition: (args...) ->
@@ -1225,8 +1238,8 @@ class Editor extends Model
 
   # Public: Mark the given position in buffer coordinates.
   #
-  # position - A {Point} or {Array} of `[row, column]`.
-  # options - See {TextBuffer::markRange}.
+  # * `position` A {Point} or {Array} of `[row, column]`.
+  # * `options` See {TextBuffer::markRange}.
   #
   # Returns a {DisplayBufferMarker}.
   markBufferPosition: (args...) ->
@@ -1283,8 +1296,8 @@ class Editor extends Model
 
   # Add a {Selection} based on the given {DisplayBufferMarker}.
   #
-  # marker  - The {DisplayBufferMarker} to highlight
-  # options - An {Object} that pertains to the {Selection} constructor.
+  # * `marker` The {DisplayBufferMarker} to highlight
+  # * `options` An {Object} that pertains to the {Selection} constructor.
   #
   # Returns the new {Selection}.
   addSelection: (marker, options={}) ->
@@ -1305,9 +1318,9 @@ class Editor extends Model
 
   # Public: Add a selection for the given range in buffer coordinates.
   #
-  # bufferRange - A {Range}
-  # options - An options {Object}:
-  #   :reversed - A {Boolean} indicating whether to create the selection in a
+  # * `bufferRange` A {Range}
+  # * `options` An options {Object}:
+  #   * `reversed` A {Boolean} indicating whether to create the selection in a
   #     reversed orientation.
   #
   # Returns the added {Selection}.
@@ -1320,9 +1333,9 @@ class Editor extends Model
   # Public: Set the selected range in buffer coordinates. If there are multiple
   # selections, they are reduced to a single selection with the given range.
   #
-  # bufferRange - A {Range} or range-compatible {Array}.
-  # options - An options {Object}:
-  #   :reversed - A {Boolean} indicating whether to create the selection in a
+  # * `bufferRange` A {Range} or range-compatible {Array}.
+  # * `options` An options {Object}:
+  #   * `reversed` A {Boolean} indicating whether to create the selection in a
   #     reversed orientation.
   setSelectedBufferRange: (bufferRange, options) ->
     @setSelectedBufferRanges([bufferRange], options)
@@ -1330,9 +1343,9 @@ class Editor extends Model
   # Public: Set the selected range in screen coordinates. If there are multiple
   # selections, they are reduced to a single selection with the given range.
   #
-  # screenRange - A {Range} or range-compatible {Array}.
-  # options - An options {Object}:
-  #   :reversed - A {Boolean} indicating whether to create the selection in a
+  # * `screenRange` A {Range} or range-compatible {Array}.
+  # * `options` An options {Object}:
+  #   * `reversed` A {Boolean} indicating whether to create the selection in a
   #     reversed orientation.
   setSelectedScreenRange: (screenRange, options) ->
     @setSelectedBufferRange(@bufferRangeForScreenRange(screenRange, options), options)
@@ -1340,9 +1353,9 @@ class Editor extends Model
   # Public: Set the selected ranges in buffer coordinates. If there are multiple
   # selections, they are replaced by new selections with the given ranges.
   #
-  # bufferRanges - An {Array} of {Range}s or range-compatible {Array}s.
-  # options - An options {Object}:
-  #   :reversed - A {Boolean} indicating whether to create the selection in a
+  # * `bufferRanges` An {Array} of {Range}s or range-compatible {Array}s.
+  # * `options` An options {Object}:
+  #   * `reversed` A {Boolean} indicating whether to create the selection in a
   #     reversed orientation.
   setSelectedBufferRanges: (bufferRanges, options={}) ->
     throw new Error("Passed an empty array to setSelectedBufferRanges") unless bufferRanges.length
@@ -1392,7 +1405,7 @@ class Editor extends Model
   # Public: Get the most recent {Selection} or the selection at the given
   # index.
   #
-  # index - Optional. The index of the selection to return, based on the order
+  # * `index` Optional. The index of the selection to return, based on the order
   #   in which the selections were added.
   #
   # Returns a {Selection}.
@@ -1423,7 +1436,7 @@ class Editor extends Model
   # Public: Determine if a given range in buffer coordinates intersects a
   # selection.
   #
-  # bufferRange - A {Range} or range-compatible {Array}.
+  # * `bufferRange` A {Range} or range-compatible {Array}.
   #
   # Returns a {Boolean}.
   selectionIntersectsBufferRange: (bufferRange) ->
@@ -1434,9 +1447,9 @@ class Editor extends Model
   #
   # If there are multiple cursors, they will be consolidated to a single cursor.
   #
-  # position - A {Point} or {Array} of `[row, column]`
-  # options  - An {Object} combining options for {::clipScreenPosition} with:
-  #   :autoscroll - Determines whether the editor scrolls to the new cursor's
+  # * `position` A {Point} or {Array} of `[row, column]`
+  # * `options` An {Object} combining options for {::clipScreenPosition} with:
+  #   * `autoscroll` Determines whether the editor scrolls to the new cursor's
   #     position. Defaults to true.
   setCursorScreenPosition: (position, options) ->
     @moveCursors (cursor) -> cursor.setScreenPosition(position, options)
@@ -1458,9 +1471,9 @@ class Editor extends Model
   #
   # If there are multiple cursors, they will be consolidated to a single cursor.
   #
-  # position - A {Point} or {Array} of `[row, column]`
-  # options  - An {Object} combining options for {::clipScreenPosition} with:
-  #   :autoscroll - Determines whether the editor scrolls to the new cursor's
+  # * `position` A {Point} or {Array} of `[row, column]`
+  # * `options` An {Object} combining options for {::clipScreenPosition} with:
+  #   * `autoscroll` Determines whether the editor scrolls to the new cursor's
   #     position. Defaults to true.
   setCursorBufferPosition: (position, options) ->
     @moveCursors (cursor) -> cursor.setBufferPosition(position, options)
@@ -1510,7 +1523,7 @@ class Editor extends Model
 
   # Public: Get the text in the given {Range} in buffer coordinates.
   #
-  # range - A {Range} or range-compatible {Array}.
+  # * `range` A {Range} or range-compatible {Array}.
   #
   # Returns a {String}.
   getTextInBufferRange: (range) ->
@@ -1518,8 +1531,8 @@ class Editor extends Model
 
   # Public: Set the text in the given {Range} in buffer coordinates.
   #
-  # range - A {Range} or range-compatible {Array}.
-  # text - A {String}
+  # * `range` A {Range} or range-compatible {Array}.
+  # * `text` A {String}
   #
   # Returns the {Range} of the newly-inserted text.
   setTextInBufferRange: (range, text, normalizeLineEndings) -> @getBuffer().setTextInRange(range, text, normalizeLineEndings)
@@ -1533,7 +1546,7 @@ class Editor extends Model
 
   # Public: Returns the word surrounding the most recently added cursor.
   #
-  # options - See {Cursor::getBeginningOfCurrentWordBufferPosition}.
+  # * `options` See {Cursor::getBeginningOfCurrentWordBufferPosition}.
   getWordUnderCursor: (options) ->
     @getTextInBufferRange(@getCursor().getCurrentWordBufferRange(options))
 
@@ -1616,9 +1629,8 @@ class Editor extends Model
   # Public: Scroll the editor to reveal the most recently added cursor if it is
   # off-screen.
   #
-  # options - An optional hash of options.
-  #   :center - Center the editor around the cursor if possible. Defauls to
-  #             true.
+  # * `options` An optional hash of options.
+  #   * `center` Center the editor around the cursor if possible. Defauls to true.
   scrollToCursorPosition: (options) ->
     @getCursor().autoscroll(center: options?.center ? true)
 
@@ -1658,7 +1670,7 @@ class Editor extends Model
   #
   # This method may merge selections that end up intesecting.
   #
-  # position - An instance of {Point}, with a given `row` and `column`.
+  # * `position` An instance of {Point}, with a given `row` and `column`.
   selectToScreenPosition: (position) ->
     lastSelection = @getLastSelection()
     lastSelection.selectToScreenPosition(position)
@@ -1876,7 +1888,7 @@ class Editor extends Model
 
   # Public: Select the range of the given marker if it is valid.
   #
-  # marker - A {DisplayBufferMarker}
+  # * `marker` A {DisplayBufferMarker}
   #
   # Returns the selected {Range} or `undefined` if the marker is invalid.
   selectMarker: (marker) ->
@@ -1975,7 +1987,7 @@ class Editor extends Model
   # abort the transaction, call {::abortTransaction} to terminate the function's
   # execution and revert any changes performed up to the abortion.
   #
-  # fn - A {Function} to call inside the transaction.
+  # * `fn` A {Function} to call inside the transaction.
   transact: (fn) -> @buffer.transact(fn)
 
   # Public: Start an open-ended transaction.
