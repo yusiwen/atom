@@ -1,9 +1,12 @@
-# Public: Manages the deserializers used for serialized state
+{Disposable} = require 'event-kit'
+Grim = require 'grim'
+
+# Extended: Manages the deserializers used for serialized state
 #
 # An instance of this class is always available as the `atom.deserializers`
 # global.
 #
-# ### Registering a deserializer
+# ## Examples
 #
 # ```coffee
 # class MyPackageView extends View
@@ -24,21 +27,24 @@ class DeserializerManager
 
   # Public: Register the given class(es) as deserializers.
   #
-  # classes - One or more classes to register.
-  add: (classes...) ->
-    @deserializers[klass.name] = klass for klass in classes
+  # * `deserializers` One or more deserializers to register. A deserializer can
+  #   be any object with a `.name` property and a `.deserialize()` method. A
+  #   common approach is to register a *constructor* as the deserializer for its
+  #   instances by adding a `.deserialize()` class method.
+  add: (deserializers...) ->
+    @deserializers[deserializer.name] = deserializer for deserializer in deserializers
+    new Disposable =>
+      delete @deserializers[deserializer.name] for deserializer in deserializers
 
-  # Public: Remove the given class(es) as deserializers.
-  #
-  # classes - One or more classes to remove.
   remove: (classes...) ->
+    Grim.deprecate("Call .dispose() on the Disposable return from ::add instead")
     delete @deserializers[name] for {name} in classes
 
   # Public: Deserialize the state and params.
   #
-  # state  - The state {Object} to deserialize.
-  # params - The params {Object} to pass as the second arguments to the
-  #          deserialize method of the deserializer.
+  # * `state` The state {Object} to deserialize.
+  # * `params` The params {Object} to pass as the second arguments to the
+  #   deserialize method of the deserializer.
   deserialize: (state, params) ->
     return unless state?
 
@@ -51,7 +57,7 @@ class DeserializerManager
 
   # Get the deserializer for the state.
   #
-  # state - The state {Object} being deserialized.
+  # * `state` The state {Object} being deserialized.
   get: (state) ->
     return unless state?
 

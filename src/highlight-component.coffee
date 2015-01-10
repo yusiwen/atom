@@ -14,19 +14,20 @@ HighlightComponent = React.createClass
 
     div {className},
       if endPixelPosition.top is startPixelPosition.top
-        @renderSingleLineRegions()
+        @renderSingleLineRegions(decoration.deprecatedRegionClass)
       else
-        @renderMultiLineRegions()
+        @renderMultiLineRegions(decoration.deprecatedRegionClass)
 
   componentDidMount: ->
     {editor, decoration} = @props
     if decoration.id?
       @decoration = editor.decorationForId(decoration.id)
-      @decoration.on 'flash', @startFlashAnimation
+      @decorationDisposable = @decoration.onDidFlash @startFlashAnimation
       @startFlashAnimation()
 
   componentWillUnmount: ->
-    @decoration?.off 'flash', @startFlashAnimation
+    @decorationDisposable?.dispose()
+    @decorationDisposable = null
 
   startFlashAnimation: ->
     return unless flash = @decoration.consumeNextFlash()
@@ -40,25 +41,32 @@ HighlightComponent = React.createClass
       removeFlashClass = -> node.classList.remove(flash.class)
       @flashTimeoutId = setTimeout(removeFlashClass, flash.duration)
 
-  renderSingleLineRegions: ->
+  renderSingleLineRegions: (regionClass) ->
     {startPixelPosition, endPixelPosition, lineHeightInPixels} = @props
 
+    className = 'region'
+    className += " #{regionClass}" if regionClass?
+
     [
-      div className: 'region', key: 0, style:
+      div className: className, key: 0, style:
         top: startPixelPosition.top
         height: lineHeightInPixels
         left: startPixelPosition.left
         width: endPixelPosition.left - startPixelPosition.left
     ]
 
-  renderMultiLineRegions: ->
+  renderMultiLineRegions: (regionClass) ->
     {startPixelPosition, endPixelPosition, lineHeightInPixels} = @props
+
+    className = 'region'
+    className += " #{regionClass}" if regionClass?
+
     regions = []
     index = 0
 
     # First row, extending from selection start to the right side of screen
     regions.push(
-      div className: 'region', key: index++, style:
+      div className: className, key: index++, style:
         top: startPixelPosition.top
         left: startPixelPosition.left
         height: lineHeightInPixels
@@ -68,7 +76,7 @@ HighlightComponent = React.createClass
     # Middle rows, extending from left side to right side of screen
     if endPixelPosition.top - startPixelPosition.top > lineHeightInPixels
       regions.push(
-        div className: 'region', key: index++, style:
+        div className: className, key: index++, style:
           top: startPixelPosition.top + lineHeightInPixels
           height: endPixelPosition.top - startPixelPosition.top - lineHeightInPixels
           left: 0
@@ -77,7 +85,7 @@ HighlightComponent = React.createClass
 
     # Last row, extending from left side of screen to selection end
     regions.push(
-      div className: 'region', key: index, style:
+      div className: className, key: index, style:
         top: endPixelPosition.top
         height: lineHeightInPixels
         left: 0
@@ -87,4 +95,4 @@ HighlightComponent = React.createClass
     regions
 
   shouldComponentUpdate: (newProps) ->
-    not isEqualForProperties(newProps, @props, 'startPixelPosition', 'endPixelPosition', 'lineHeightInPixels')
+    not isEqualForProperties(newProps, @props, 'startPixelPosition', 'endPixelPosition', 'lineHeightInPixels', 'decoration')

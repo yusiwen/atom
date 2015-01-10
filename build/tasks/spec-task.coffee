@@ -2,26 +2,50 @@ fs = require 'fs'
 path = require 'path'
 
 _ = require 'underscore-plus'
-
 async = require 'async'
+
+concurrency = 2
 
 module.exports = (grunt) ->
   {isAtomPackage, spawn} = require('./task-helpers')(grunt)
 
   packageSpecQueue = null
 
+  logDeprecations = (label, {stderr}={}) ->
+    return unless process.env.JANKY_SHA1
+    stderr ?= ''
+    deprecatedStart = stderr.indexOf('Calls to deprecated functions')
+    return if deprecatedStart.length is -1
+
+    grunt.log.error(label)
+    stderr = stderr.substring(deprecatedStart)
+    stderr = stderr.replace(/^\s*\[[^\]]+\]\s+/gm, '')
+    stderr = stderr.replace(/source: .*$/gm, '')
+    stderr = stderr.replace(/^"/gm, '')
+    stderr = stderr.replace(/",\s*$/gm, '')
+    grunt.log.error(stderr)
+
+  getAppPath = ->
+    contentsDir = grunt.config.get('atom.contentsDir')
+    switch process.platform
+      when 'darwin'
+        path.join(contentsDir, 'MacOS', 'Atom')
+      when 'linux'
+        path.join(contentsDir, 'atom')
+      when 'win32'
+        path.join(contentsDir, 'atom.exe')
+
   runPackageSpecs = (callback) ->
     failedPackages = []
     rootDir = grunt.config.get('atom.shellAppDir')
-    contentsDir = grunt.config.get('atom.contentsDir')
     resourcePath = process.cwd()
-    if process.platform is 'darwin'
-      appPath = path.join(contentsDir, 'MacOS', 'Atom')
-    else if process.platform is 'win32'
-      appPath = path.join(contentsDir, 'atom.exe')
+    appPath = getAppPath()
+
+    # Ensure application is executable on Linux
+    fs.chmodSync(appPath, '755') if process.platform is 'linux'
 
     packageSpecQueue = async.queue (packagePath, callback) ->
-      if process.platform is 'darwin'
+      if process.platform in ['darwin', 'linux']
         options =
           cmd: appPath
           args: ['--test', "--resource-path=#{resourcePath}", "--spec-directory=#{path.join(packagePath, 'spec')}"]
@@ -44,6 +68,7 @@ module.exports = (grunt) ->
           fs.unlinkSync(path.join(packagePath, 'ci.log'))
 
         failedPackages.push path.basename(packagePath) if error
+        logDeprecations("#{path.basename(packagePath)} Specs", results)
         callback()
 
     modulesDirectory = path.resolve('node_modules')
@@ -53,19 +78,15 @@ module.exports = (grunt) ->
       continue unless isAtomPackage(packagePath)
       packageSpecQueue.push(packagePath)
 
-    packageSpecQueue.concurrency = 1
+    packageSpecQueue.concurrency = concurrency - 1
     packageSpecQueue.drain = -> callback(null, failedPackages)
 
   runCoreSpecs = (callback) ->
-    contentsDir = grunt.config.get('atom.contentsDir')
-    if process.platform is 'darwin'
-      appPath = path.join(contentsDir, 'MacOS', 'Atom')
-    else if process.platform is 'win32'
-      appPath = path.join(contentsDir, 'atom.exe')
+    appPath = getAppPath()
     resourcePath = process.cwd()
     coreSpecsPath = path.resolve('spec')
 
-    if process.platform is 'darwin'
+    if process.platform in ['darwin', 'linux']
       options =
         cmd: appPath
         args: ['--test', "--resource-path=#{resourcePath}", "--spec-directory=#{coreSpecsPath}"]
@@ -80,7 +101,8 @@ module.exports = (grunt) ->
         fs.unlinkSync('ci.log')
       else
         # TODO: Restore concurrency on Windows
-        packageSpecQueue.concurrency = 2
+        packageSpecQueue.concurrency = concurrency
+        logDeprecations('Core Specs', results)
 
       callback(null, error)
 
@@ -90,7 +112,7 @@ module.exports = (grunt) ->
 
     # TODO: This should really be parallel on both platforms, however our
     # fixtures step on each others toes currently.
-    if process.platform is 'darwin'
+    if process.platform in ['darwin', 'linux']
       method = async.parallel
     else if process.platform is 'win32'
       method = async.series
@@ -98,14 +120,13 @@ module.exports = (grunt) ->
     method [runCoreSpecs, runPackageSpecs], (error, results) ->
       [coreSpecFailed, failedPackages] = results
       elapsedTime = Math.round((Date.now() - startTime) / 100) / 10
-      grunt.verbose.writeln("Total spec time: #{elapsedTime}s")
+      grunt.log.ok("Total spec time: #{elapsedTime}s using #{concurrency} cores")
       failures = failedPackages
       failures.push "atom core" if coreSpecFailed
 
       grunt.log.error("[Error]".red + " #{failures.join(', ')} spec(s) failed") if failures.length > 0
 
       if process.platform is 'win32' and process.env.JANKY_SHA1
-        # Package specs are still flaky on Windows CI
-        done(!coreSpecFailed)
+        done()
       else
         done(!coreSpecFailed and failedPackages.length == 0)

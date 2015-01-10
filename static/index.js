@@ -1,9 +1,43 @@
 window.onload = function() {
-  var path = require('path');
-  var ipc = require('ipc');
   try {
+    var startTime = Date.now();
+
+    var fs = require('fs');
+    var path = require('path');
+
+    // Patch fs.statSyncNoException/fs.lstatSyncNoException to fail for non-strings
+    // https://github.com/atom/atom-shell/issues/843
+    var statSyncNoException = fs.statSyncNoException;
+    var lstatSyncNoException = fs.lstatSyncNoException;
+    fs.statSyncNoException = function(pathToStat) {
+      if (pathToStat && typeof pathToStat === 'string')
+        return statSyncNoException(pathToStat);
+      else
+        return false;
+    };
+    fs.lstatSyncNoException = function(pathToStat) {
+      if (pathToStat && typeof pathToStat === 'string')
+        return lstatSyncNoException(pathToStat);
+      else
+        return false;
+    };
+
     // Skip "?loadSettings=".
     var loadSettings = JSON.parse(decodeURIComponent(location.search.substr(14)));
+
+    // Normalize to make sure drive letter case is consistent on Windows
+    process.resourcesPath = path.normalize(process.resourcesPath);
+
+    var devMode = loadSettings.devMode || !loadSettings.resourcePath.startsWith(process.resourcesPath + path.sep);
+
+    // Require before the module cache in dev mode
+    if (devMode) {
+      require('coffee-script').register();
+    }
+
+    ModuleCache = require('../src/module-cache');
+    ModuleCache.register(loadSettings);
+    ModuleCache.add(loadSettings.resourcePath);
 
     // Start the crash reporter before anything else.
     require('crash-reporter').start({
@@ -15,10 +49,20 @@ window.onload = function() {
     });
 
     require('vm-compatibility-layer');
-    require('coffee-script').register();
-    require(path.resolve(__dirname, '..', 'src', 'coffee-cache')).register();
+
+    if (!devMode) {
+      require('coffee-script').register();
+    }
+
+    require('../src/coffee-cache').register();
+
     require(loadSettings.bootstrapScript);
-    ipc.sendChannel('window-command', 'window:loaded')
+    require('ipc').sendChannel('window-command', 'window:loaded');
+
+    if (global.atom) {
+      global.atom.loadTime = Date.now() - startTime;
+      console.log('Window load time: ' + global.atom.getWindowLoadTime() + 'ms');
+    }
   }
   catch (error) {
     var currentWindow = require('remote').getCurrentWindow();

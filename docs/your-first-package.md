@@ -49,18 +49,18 @@ Register the command in _lib/ascii-art.coffee_:
 ```coffeescript
 module.exports =
   activate: ->
-    atom.workspaceView.command "ascii-art:convert", => @convert()
+    atom.commands.add 'atom-workspace', "ascii-art:convert", => @convert()
 
   convert: ->
     # This assumes the active pane item is an editor
-    editor = atom.workspace.activePaneItem
+    editor = atom.workspace.getActivePaneItem()
     editor.insertText('Hello, World!')
 ```
 
-The `atom.workspaceView.command` method takes a command name and a callback. The
-callback executes when the command is triggered. In this case, when the command
-is triggered the callback will call the `convert` method and insert 'Hello,
-World!'.
+The `atom.commands.add` method takes a selector, command name, and a callback.
+The callback executes when the command is triggered on an element matching the
+selector. In this case, when the command is triggered the callback will call the
+`convert` method and insert 'Hello, World!'.
 
 ## Reload the Package
 
@@ -91,17 +91,17 @@ _keymaps/ascii-art.cson_ and add a key binding linking `ctrl-alt-a` to the
 you don't need it anymore. When finished, the file will look like this:
 
 ```coffeescript
-'.editor':
+'atom-text-editor':
   'cmd-alt-a': 'ascii-art:convert'
 ```
 
-Notice `.editor` on the first line. Just like CSS, keymap selectors *scope* key
-bindings so they only apply to specific elements. In this case, our binding is
-only active for elements matching the `.editor` selector. If the Tree View has
-focus, pressing `cmd-alt-a` won't trigger the `ascii-art:convert` command. But
-if the editor has focus, the `ascii-art:convert` method *will* be triggered.
-More information on key bindings can be found in the
-[keymaps](advanced/keymaps.html) documentation.
+Notice `atom-text-editor` on the first line. Just like CSS, keymap selectors
+*scope* key bindings so they only apply to specific elements. In this case, our
+binding is only active for elements matching the `atom-text-editor` selector. If
+the Tree View has focus, pressing `cmd-alt-a` won't trigger the
+`ascii-art:convert` command. But if the editor has focus, the
+`ascii-art:convert` method *will* be triggered. More information on key bindings
+can be found in the [keymaps](advanced/keymaps.html) documentation.
 
 Now reload the window and verify that the key binding works! You can also verify
 that it **doesn't** work when the Tree View is focused.
@@ -131,8 +131,8 @@ inserting 'Hello, World!' convert the selected text to ASCII art.
 ```coffeescript
 convert: ->
   # This assumes the active pane item is an editor
-  editor = atom.workspace.activePaneItem
-  selection = editor.getSelection()
+  editor = atom.workspace.getActivePaneItem()
+  selection = editor.getLastSelection()
 
   figlet = require 'figlet'
   figlet selection.getText(), {font: "Larry 3D 2"}, (error, asciiArt) ->

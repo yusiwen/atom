@@ -15,7 +15,7 @@ my-package/
   menus/
   spec/
   snippets/
-  stylesheets/
+  styles/
   index.coffee
   package.json
 ```
@@ -39,9 +39,9 @@ package.json files have their own additions.
 
 - `main` (**Required**): the path to the CoffeeScript file that's the entry point
 to your package
-- `stylesheets` (**Optional**): an Array of Strings identifying the order of the
-stylesheets your package needs to load. If not specified, stylesheets in the
-_stylesheets_ directory are added alphabetically.
+- `styles` (**Optional**): an Array of Strings identifying the order of the
+style sheets your package needs to load. If not specified, style sheets in the
+_styles_ directory are added alphabetically.
 - `keymaps`(**Optional**): an Array of Strings identifying the order of the
 key mappings your package needs to load. If not specified, mappings in the
 _keymaps_ directory are added alphabetically.
@@ -119,27 +119,27 @@ Also, please collaborate with us if you need an API that doesn't exist. Our goal
 is to build out Atom's API organically based on the needs of package authors
 like you.
 
-## Stylesheets
+## Style Sheets
 
-Stylesheets for your package should be placed in the _stylesheets_ directory.
-Any stylesheets in this directory will be loaded and attached to the DOM when
-your package is activated. Stylesheets can be written as CSS or [LESS] (but LESS
-is recommended).
+Style sheets for your package should be placed in the _styles_ directory.
+Any style sheets in this directory will be loaded and attached to the DOM when
+your package is activated. Style sheets can be written as CSS or [LESS], but
+LESS is recommended.
 
 Ideally, you won't need much in the way of styling. We've provided a standard
 set of components which define both the colors and UI elements for any package
-that fits into Atom seamlessly. You can view all of Atom's UI components by opening
-the styleguide: open the command palette (`cmd-shift-P`) and search for _styleguide_,
-or just type `cmd-ctrl-shift-G`.
+that fits into Atom seamlessly. You can view all of Atom's UI components by
+opening the styleguide: open the command palette (`cmd-shift-P`) and search for
+_styleguide_, or just type `cmd-ctrl-shift-G`.
 
-If you _do_ need special styling, try to keep only structural styles in the package
-stylesheets. If you _must_ specify colors and sizing, these should be taken from
-the active theme's [ui-variables.less][ui-variables]. For more information, see the
-[theme variables docs][theme-variables]. If you follow this guideline, your package
-will look good out of the box with any theme!
+If you _do_ need special styling, try to keep only structural styles in the
+package style sheets. If you _must_ specify colors and sizing, these should be
+taken from the active theme's [ui-variables.less][ui-variables]. For more
+information, see the [theme variables docs][theme-variables]. If you follow this
+guideline, your package will look good out of the box with any theme!
 
-An optional `stylesheets` array in your _package.json_ can list the stylesheets
-by name to specify a loading order; otherwise, stylesheets are loaded
+An optional `styleSheets` array in your _package.json_ can list the style sheets
+by name to specify a loading order; otherwise, style sheets are loaded
 alphabetically.
 
 ## Keymaps
@@ -157,9 +157,9 @@ loaded in alphabetical order. An optional `keymaps` array in your _package.json_
 can specify which keymaps to load and in what order.
 
 
-Keybindings are executed by determining which element the keypress occurred on. In
-the example above, `changer:magic` command is executed when pressing `ctrl-V` on
-the `.tree-view-scroller` element.
+Keybindings are executed by determining which element the keypress occurred on.
+In the example above, `changer:magic` command is executed when pressing `ctrl-V`
+on the `.tree-view-scroller` element.
 
 See the [main keymaps documentation][keymaps] for more detailed information on
 how keymaps work.
@@ -195,7 +195,8 @@ with your package that aren't tied to a specific element:
 ```
 
 To add your own item to the application menu, simply create a top level `menu`
-key in any menu configuration file in _menus_. This can be a JSON or [CSON] file.
+key in any menu configuration file in _menus_. This can be a JSON or [CSON]
+file.
 
 The menu templates you specify are merged with all other templates provided
 by other packages in the order which they were loaded.
@@ -207,37 +208,44 @@ specific parts of the interface, like adding a file in the tree-view:
 
 ```coffeescript
 'context-menu':
-  '.tree-view':
-    'Add file': 'tree-view:add-file'
-  '.workspace':
-    'Inspect Element': 'core:inspect'
+  '.tree-view': [
+    {label: 'Add file', command: 'tree-view:add-file'}
+  ]
+  'atom-workspace': [
+    {label: 'Inspect Element', command: 'core:inspect'}
+  ]
 ```
 
 To add your own item to the application menu simply create a top level
 `context-menu` key in any menu configuration file in _menus_. This can be a
 JSON or [CSON] file.
 
-Context menus are created by determining which element was selected and
-then adding all of the menu items whose selectors match that element (in
-the order which they were loaded). The process is then repeated for the
-elements until reaching the top of the DOM tree.
+Context menus are created by determining which element was selected and then
+adding all of the menu items whose selectors match that element (in the order
+which they were loaded). The process is then repeated for the elements until
+reaching the top of the DOM tree.
 
 In the example above, the `Add file` item will only appear when the focused item
 or one of its parents has the `tree-view` class applied to it.
 
 You can also add separators and submenus to your context menus. To add a
-submenu, pass in another object instead of a command. To add a separator, use
-`-` for the command of the item.
+submenu, provide a `submenu` key instead of a command. To add a separator, add
+an item with a single `type: 'separator'` key/value pair.
 
 ```coffeescript
 'context-menu':
-  '.workspace':
-    'Inspect Element': 'core:inspect'
-    'Separator': '-'
-    'Text':
-      'Select All': 'core:select-all'
-      'Another Separator': '-'
-      'Deleted Selected Text': 'core:delete'
+  'atom-workspace': [
+    {
+      label: 'Text'
+      submenu: [
+        {label: 'Inspect Element', command: 'core:inspect'}
+        {type: 'separator'}
+        {label: 'Selector All', command: 'core:select-all'}
+        {type: 'separator'}
+        {label: 'Deleted Selected Text', command: 'core:delete'}
+      ]
+    }
+  ]
 ```
 
 ## Snippets
@@ -321,6 +329,29 @@ extensions your grammar supports:
 ]
 ```
 
+## Adding Configuration Settings
+
+You can support config settings in your package that are editable in the
+settings view. Specify a `config` key in your package main:
+
+```coffeescript
+module.exports =
+  # Your config schema!
+  config:
+    someInt:
+      type: 'integer'
+      default: 23
+      minimum: 1
+  activate: (state) -> # ...
+  # ...
+```
+
+To define the configuration, we use [json schema][json-schema] which allows you
+to indicate the type your value should be, its default, etc.
+
+See the [Config API Docs](https://atom.io/docs/api/latest/Config) for more
+details specifying your configuration.
+
 ## Bundle External Resources
 
 It's common to ship external resources like images and fonts in the package, to
@@ -387,8 +418,9 @@ all the other available commands.
 [underscore]: http://underscorejs.org/
 [jasmine]: http://jasmine.github.io
 [cson]: https://github.com/atom/season
-[less]: http://lesscss.org
-[ui-variables]: https://github.com/atom/atom-dark-ui/blob/master/stylesheets/ui-variables.less
+[LESS]: http://lesscss.org
+[ui-variables]: https://github.com/atom/atom-dark-ui/blob/master/styles/ui-variables.less
 [first-package]: your-first-package.html
 [convert-bundle]: converting-a-text-mate-bundle.html
 [convert-theme]: converting-a-text-mate-theme.html
+[json-schema]: http://json-schema.org/

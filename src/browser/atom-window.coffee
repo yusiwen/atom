@@ -1,7 +1,5 @@
 BrowserWindow = require 'browser-window'
-ContextMenu = require './context-menu'
 app = require 'app'
-dialog = require 'dialog'
 path = require 'path'
 fs = require 'fs'
 url = require 'url'
@@ -20,20 +18,28 @@ class AtomWindow
   isSpec: null
 
   constructor: (settings={}) ->
-    {@resourcePath, pathToOpen, initialLine, initialColumn, @isSpec, @exitWhenDone, @safeMode} = settings
+    {@resourcePath, pathToOpen, initialLine, initialColumn, @isSpec, @exitWhenDone, @safeMode, @devMode} = settings
 
     # Normalize to make sure drive letter case is consistent on Windows
     @resourcePath = path.normalize(@resourcePath) if @resourcePath
 
+    @browserWindow = new BrowserWindow
+      show: false
+      title: 'Atom'
+      icon: @constructor.iconPath
+      'web-preferences':
+        'direct-write': false
+        'subpixel-font-scaling': false
     global.atomApplication.addWindow(this)
 
-    @browserWindow = new BrowserWindow show: false, title: 'Atom', icon: @constructor.iconPath
     @handleEvents()
 
     loadSettings = _.extend({}, settings)
     loadSettings.windowState ?= '{}'
     loadSettings.appVersion = app.getVersion()
     loadSettings.resourcePath = @resourcePath
+    loadSettings.devMode ?= false
+    loadSettings.safeMode ?= false
 
     # Only send to the first non-spec window created
     if @constructor.includeShellLoadTime and not @isSpec
@@ -49,10 +55,12 @@ class AtomWindow
       @emit 'window:loaded'
       @loaded = true
 
+    @browserWindow.on 'project-path-changed', (@projectPath) =>
+
     @browserWindow.loadUrl @getUrl(loadSettings)
     @browserWindow.focusOnWebView() if @isSpec
 
-    @openPath(pathToOpen, initialLine, initialColumn)
+    @openPath(pathToOpen, initialLine, initialColumn) unless @isSpecWindow()
 
   getUrl: (loadSettingsObj) ->
     # Ignore the windowState when passing loadSettings via URL, since it could
@@ -66,8 +74,17 @@ class AtomWindow
       slashes: true
       query: {loadSettings: JSON.stringify(loadSettings)}
 
+  hasProjectPath: -> @projectPath?.length > 0
+
   getInitialPath: ->
     @browserWindow.loadSettings.initialPath
+
+  setupContextMenu: ->
+    ContextMenu = null
+
+    @browserWindow.on 'context-menu', (menuTemplate) =>
+      ContextMenu ?= require './context-menu'
+      new ContextMenu(menuTemplate, this)
 
   containsPath: (pathToCheck) ->
     initialPath = @getInitialPath()
@@ -91,6 +108,7 @@ class AtomWindow
     @browserWindow.on 'unresponsive', =>
       return if @isSpec
 
+      dialog = require 'dialog'
       chosen = dialog.showMessageBox @browserWindow,
         type: 'warning'
         buttons: ['Close', 'Keep Waiting']
@@ -101,6 +119,7 @@ class AtomWindow
     @browserWindow.webContents.on 'crashed', =>
       global.atomApplication.exit(100) if @exitWhenDone
 
+      dialog = require 'dialog'
       chosen = dialog.showMessageBox @browserWindow,
         type: 'warning'
         buttons: ['Close Window', 'Reload', 'Keep It Open']
@@ -110,8 +129,7 @@ class AtomWindow
         when 0 then @browserWindow.destroy()
         when 1 then @browserWindow.restart()
 
-    @browserWindow.on 'context-menu', (menuTemplate) =>
-      new ContextMenu(menuTemplate, this)
+    @setupContextMenu()
 
     if @isSpec
       # Workaround for https://github.com/atom/atom-shell/issues/380
@@ -127,9 +145,12 @@ class AtomWindow
   openPath: (pathToOpen, initialLine, initialColumn) ->
     if @loaded
       @focus()
-      @sendCommand('window:open-path', {pathToOpen, initialLine, initialColumn})
+      @sendMessage 'open-path', {pathToOpen, initialLine, initialColumn}
     else
       @browserWindow.once 'window:loaded', => @openPath(pathToOpen, initialLine, initialColumn)
+
+  sendMessage: (message, detail) ->
+    @browserWindow.webContents.send 'message', message, detail
 
   sendCommand: (command, args...) ->
     if @isSpecWindow()
@@ -138,7 +159,6 @@ class AtomWindow
           when 'window:reload' then @reload()
           when 'window:toggle-dev-tools' then @toggleDevTools()
           when 'window:close' then @close()
-          when 'window:update-available' then @sendCommandToBrowserWindow(command, args...) # For spec testing
     else if @isWebViewFocused()
       @sendCommandToBrowserWindow(command, args...)
     else
@@ -168,6 +188,8 @@ class AtomWindow
     not @isSpecWindow() and @isWebViewFocused()
 
   isFocused: -> @browserWindow.isFocused()
+
+  isMinimized: -> @browserWindow.isMinimized()
 
   isWebViewFocused: -> @browserWindow.isWebViewFocused()
 

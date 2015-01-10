@@ -1,8 +1,8 @@
 # Creating a Theme
 
-Atom's interface is rendered using HTML, and it's styled via [LESS] (a superset
-of CSS). Don't worry if you haven't heard of LESS before; it's just like CSS,
-but with a few handy extensions.
+Atom's interface is rendered using HTML, and it's styled via [LESS] which is a
+superset of CSS. Don't worry if you haven't heard of LESS before; it's just like
+CSS, but with a few handy extensions.
 
 Atom supports two types of themes: _UI_ and _syntax_.  UI themes style
 elements such as the tree view, the tabs, drop-down lists, and the status bar.
@@ -42,10 +42,10 @@ _Motif_ theme listed in the _Syntax Theme_ drop-down. Select it from the menu to
 activate it, now when you open an editor you should see that your new
 _motif-syntax_ theme in action.
 
-Open up _stylesheets/colors.less_ to change the various colors variables which
+Open up _styles/colors.less_ to change the various colors variables which
 have been already been defined. For example, turn `@red` into `#f4c2c1`.
 
-Then open _stylesheets/base.less_ and modify the various selectors that have
+Then open _styles/base.less_ and modify the various selectors that have
 been already been defined. These selectors style different parts of code in the
 editor such as comments, strings and the line numbers in the gutter.
 
@@ -58,6 +58,8 @@ __Tip:__ You can avoid reloading to see changes you make by opening an atom
 window in dev mode. To open a Dev Mode Atom window run `atom --dev .` in the
 terminal, use `cmd-shift-o` or use the _View > Developer > Open in Dev Mode_
 menu. When you edit your theme, changes will instantly be reflected!
+
+> Note: It's advised to _not_ specify a `font-family` in your syntax theme because it will override the Font Family field in Atom's settings. If you still like to recommend a font that goes well with your theme, we recommend you do so in your README.
 
 ## Creating an Interface Theme
 
@@ -129,7 +131,7 @@ _styleguide_, or use the shortcut `cmd-ctrl-shift-g`.
 ![styleguide-img]
 
 [atomio]: http://atom.io/packages
-[less]: http://lesscss.org/
+[LESS]: http://lesscss.org/
 [git]: http://git-scm.com/
 [atom]: https://atom.io/
 [package.json]: ./creating-a-package.html#package-json

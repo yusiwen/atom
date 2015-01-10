@@ -1,6 +1,6 @@
-{$, $$} = require 'atom'
+{$, $$} = require '../src/space-pen-extensions'
 path = require 'path'
-Editor = require '../src/editor'
+TextEditor = require '../src/text-editor'
 WindowEventHandler = require '../src/window-event-handler'
 
 describe "Window", ->
@@ -8,7 +8,7 @@ describe "Window", ->
 
   beforeEach ->
     spyOn(atom, 'hide')
-    initialPath = atom.project.getPath()
+    initialPath = atom.project.getPaths()[0]
     spyOn(atom, 'getLoadSettings').andCallFake ->
       loadSettings = atom.getLoadSettings.originalValue.call(atom)
       loadSettings.initialPath = initialPath
@@ -16,7 +16,7 @@ describe "Window", ->
     atom.project.destroy()
     windowEventHandler = new WindowEventHandler()
     atom.deserializeEditorWindow()
-    projectPath = atom.project.getPath()
+    projectPath = atom.project.getPaths()[0]
 
   afterEach ->
     windowEventHandler.unsubscribe()
@@ -47,25 +47,17 @@ describe "Window", ->
       $(window).trigger 'window:close'
       expect(atom.close).toHaveBeenCalled()
 
-    it "emits the beforeunload event", ->
-      $(window).off 'beforeunload'
-      beforeunload = jasmine.createSpy('beforeunload').andReturn(false)
-      $(window).on 'beforeunload', beforeunload
-
-      $(window).trigger 'window:close'
-      expect(beforeunload).toHaveBeenCalled()
-
   describe "beforeunload event", ->
     [beforeUnloadEvent] = []
 
     beforeEach ->
-      jasmine.unspy(Editor.prototype, "shouldPromptToSave")
+      jasmine.unspy(TextEditor.prototype, "shouldPromptToSave")
       beforeUnloadEvent = $.Event(new Event('beforeunload'))
 
     describe "when pane items are are modified", ->
-      it "prompts user to save and and calls workspaceView.confirmClose", ->
+      it "prompts user to save and calls atom.workspace.confirmClose", ->
         editor = null
-        spyOn(atom.workspaceView, 'confirmClose').andCallThrough()
+        spyOn(atom.workspace, 'confirmClose').andCallThrough()
         spyOn(atom, "confirm").andReturn(2)
 
         waitsForPromise ->
@@ -74,7 +66,7 @@ describe "Window", ->
         runs ->
           editor.insertText("I look different, I feel different.")
           $(window).trigger(beforeUnloadEvent)
-          expect(atom.workspaceView.confirmClose).toHaveBeenCalled()
+          expect(atom.workspace.confirmClose).toHaveBeenCalled()
           expect(atom.confirm).toHaveBeenCalled()
 
       it "prompts user to save and handler returns true if don't save", ->
@@ -103,13 +95,13 @@ describe "Window", ->
   describe ".unloadEditorWindow()", ->
     it "saves the serialized state of the window so it can be deserialized after reload", ->
       workspaceState = atom.workspace.serialize()
-      syntaxState = atom.syntax.serialize()
+      syntaxState = atom.grammars.serialize()
       projectState = atom.project.serialize()
 
       atom.unloadEditorWindow()
 
       expect(atom.state.workspace).toEqual workspaceState
-      expect(atom.state.syntax).toEqual syntaxState
+      expect(atom.state.grammars).toEqual syntaxState
       expect(atom.state.project).toEqual projectState
       expect(atom.saveSync).toHaveBeenCalled()
 
@@ -120,9 +112,9 @@ describe "Window", ->
 
       runs ->
         buffer = atom.workspace.getActivePaneItem().buffer
-        pane = atom.workspaceView.getActivePaneView()
-        pane.splitRight(pane.copyActiveItem())
-        expect(atom.workspaceView.find('.editor').length).toBe 2
+        pane = atom.workspace.getActivePane()
+        pane.splitRight(copyActiveItem: true)
+        expect(atom.workspace.getTextEditors().length).toBe 2
 
         atom.removeEditorWindow()
 
@@ -136,17 +128,15 @@ describe "Window", ->
         setData: (key, value) -> @data[key] = value
         getData: (key) -> @data[key]
 
-      event = $.Event(type)
-      event.originalEvent = { dataTransfer }
-      event.preventDefault = ->
-      event.stopPropagation = ->
+      event = new CustomEvent("drop")
+      event.dataTransfer = dataTransfer
       event
 
     describe "when a file is dragged to window", ->
       it "opens it", ->
         spyOn(atom, "open")
         event = buildDragEvent("drop", [ {path: "/fake1"}, {path: "/fake2"} ])
-        $(document).trigger(event)
+        document.dispatchEvent(event)
         expect(atom.open.callCount).toBe 1
         expect(atom.open.argsForCall[0][0]).toEqual pathsToOpen: ['/fake1', '/fake2']
 
@@ -154,7 +144,7 @@ describe "Window", ->
       it "does nothing", ->
         spyOn(atom, "open")
         event = buildDragEvent("drop", [])
-        $(document).trigger(event)
+        document.dispatchEvent(event)
         expect(atom.open).not.toHaveBeenCalled()
 
   describe "when a link is clicked", ->
@@ -256,3 +246,34 @@ describe "Window", ->
 
         elements.trigger "core:focus-previous"
         expect(elements.find("[tabindex=1]:focus")).toExist()
+
+  describe "the window:open-path event", ->
+    beforeEach ->
+      spyOn(atom.workspace, 'open')
+
+    describe "when the project does not have a path", ->
+      beforeEach ->
+        atom.project.setPaths([])
+
+      describe "when the opened path exists", ->
+        it "sets the project path to the opened path", ->
+          atom.getCurrentWindow().send 'message', 'open-path', pathToOpen: __filename
+          expect(atom.project.getPaths()[0]).toBe __dirname
+
+      describe "when the opened path does not exist but its parent directory does", ->
+        it "sets the project path to the opened path's parent directory", ->
+          pathToOpen = path.join(__dirname, 'this-path-does-not-exist.txt')
+          atom.getCurrentWindow().send 'message', 'open-path', {pathToOpen}
+          expect(atom.project.getPaths()[0]).toBe __dirname
+
+    describe "when the opened path is a file", ->
+      it "opens it in the workspace", ->
+        atom.getCurrentWindow().send 'message', 'open-path', pathToOpen: __filename
+
+        expect(atom.workspace.open.mostRecentCall.args[0]).toBe __filename
+
+    describe "when the opened path is a directory", ->
+      it "does not open it in the workspace", ->
+        atom.getCurrentWindow().send 'message', 'open-path', pathToOpen: __dirname
+
+        expect(atom.workspace.open.callCount).toBe 0

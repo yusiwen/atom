@@ -6,6 +6,11 @@ CSON = require 'season'
 fs = require 'fs-plus'
 
 cacheDir = path.join(fs.absolute('~/.atom'), 'compile-cache')
+
+# Use separate compile cache when sudo'ing as root to avoid permission issues
+if process.env.USER is 'root' and process.env.SUDO_USER and process.env.SUDO_USER isnt process.env.USER
+  cacheDir = path.join(cacheDir, 'root')
+
 coffeeCacheDir = path.join(cacheDir, 'coffee')
 CSON.setCacheDir(path.join(cacheDir, 'cson'))
 
@@ -40,8 +45,18 @@ requireCoffeeScript = (module, filePath) ->
 
 module.exports =
   cacheDir: cacheDir
+
   register: ->
     Object.defineProperty(require.extensions, '.coffee', {
       writable: false
       value: requireCoffeeScript
     })
+
+  addPathToCache: (filePath) ->
+    extension = path.extname(filePath)
+    if extension is '.coffee'
+      content = fs.readFileSync(filePath, 'utf8')
+      cachePath = getCachePath(coffee)
+      compileCoffeeScript(coffee, filePath, cachePath)
+    else if extension is '.cson'
+      CSON.readFileSync(filePath)

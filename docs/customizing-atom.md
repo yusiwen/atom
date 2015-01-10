@@ -54,16 +54,16 @@ You can also use `apm` to find new packages to install:
 
 ## Customizing Key Bindings
 
-Atom keymaps work similarly to stylesheets. Just as stylesheets use selectors
+Atom keymaps work similarly to style sheets. Just as style sheets use selectors
 to apply styles to elements, Atom keymaps use selectors to associate keystrokes
 with events in specific contexts. Here's a small example, excerpted from Atom's
 built-in keymaps:
 
 ```coffee
-'.editor':
+'atom-text-editor':
   'enter': 'editor:newline'
 
-'.mini.editor input':
+'atom-text-editor[mini] input':
   'enter': 'core:confirm'
 ```
 
@@ -105,6 +105,7 @@ You can open this file in an editor from the _Atom > Open Your Config_ menu.
 - `core`
   - `disabledPackages`: An array of package names to disable
   - `excludeVcsIgnoredPaths`: Don't search within files specified by _.gitignore_
+  - `followSymlinks`: Follow symlinks when searching and scanning root directory
   - `ignoredNames`: File names to ignore across all of Atom
   - `projectHome`: The directory where projects are assumed to be located
   - `themes`: An array of theme names to load, in cascading order
@@ -118,7 +119,6 @@ You can open this file in an editor from the _Atom > Open Your Config_ menu.
       - `cr`: Carriage return (for Microsoft-style line endings)
       - `eol`: `\n` characters
       - `space`: Leading and trailing space characters
-  - `normalizeIndentOnPaste`: Enable/disable conversion of pasted tabs to spaces
   - `preferredLineLength`: Identifies the length of a line (defaults to `80`)
   - `showInvisibles`: Whether to render placeholders for invisible characters (defaults to `false`)
   - `showIndentGuide`: Show/hide indent indicators within the editor
@@ -169,7 +169,7 @@ For example, to change the color of the cursor, you could add the following
 rule to your _~/.atom/styles.less_ file:
 
 ```less
-.editor.is-focused .cursor {
+atom-text-editor.is-focused .cursor {
   border-color: pink;
 }
 ```

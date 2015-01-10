@@ -9,9 +9,11 @@ ScrollbarComponent = React.createClass
   render: ->
     {orientation, className, scrollHeight, scrollWidth, visible} = @props
     {scrollableInOppositeDirection, horizontalScrollbarHeight, verticalScrollbarWidth} = @props
+    {useHardwareAcceleration} = @props
 
     style = {}
     style.display = 'none' unless visible
+    style.transform = 'translateZ(0)' if useHardwareAcceleration # See atom/atom#3559
     switch orientation
       when 'vertical'
         style.width = verticalScrollbarWidth
@@ -21,7 +23,7 @@ ScrollbarComponent = React.createClass
         style.right = verticalScrollbarWidth if scrollableInOppositeDirection
         style.height = horizontalScrollbarHeight
 
-    div {className, style, @onScroll},
+    div {className, style},
       switch orientation
         when 'vertical'
           div className: 'scrollbar-content', style: {height: scrollHeight}
@@ -34,14 +36,19 @@ ScrollbarComponent = React.createClass
     unless orientation is 'vertical' or orientation is 'horizontal'
       throw new Error("Must specify an orientation property of 'vertical' or 'horizontal'")
 
+    @getDOMNode().addEventListener 'scroll', @onScroll
+
+  componentWillUnmount: ->
+    @getDOMNode().removeEventListener 'scroll', @onScroll
+
   shouldComponentUpdate: (newProps) ->
     return true if newProps.visible isnt @props.visible
 
     switch @props.orientation
       when 'vertical'
-        not isEqualForProperties(newProps, @props, 'scrollHeight', 'scrollTop', 'scrollableInOppositeDirection')
+        not isEqualForProperties(newProps, @props, 'scrollHeight', 'scrollTop', 'scrollableInOppositeDirection', 'verticalScrollbarWidth')
       when 'horizontal'
-        not isEqualForProperties(newProps, @props, 'scrollWidth', 'scrollLeft', 'scrollableInOppositeDirection')
+        not isEqualForProperties(newProps, @props, 'scrollWidth', 'scrollLeft', 'scrollableInOppositeDirection', 'horizontalScrollbarHeight')
 
   componentDidUpdate: ->
     {orientation, scrollTop, scrollLeft} = @props

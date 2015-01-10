@@ -5,13 +5,11 @@ AutoUpdateManager = require './auto-update-manager'
 BrowserWindow = require 'browser-window'
 Menu = require 'menu'
 app = require 'app'
-dialog = require 'dialog'
 fs = require 'fs'
 ipc = require 'ipc'
 path = require 'path'
 os = require 'os'
 net = require 'net'
-shell = require 'shell'
 url = require 'url'
 {EventEmitter} = require 'events'
 _ = require 'underscore-plus'
@@ -72,7 +70,7 @@ class AtomApplication
 
     @autoUpdateManager = new AutoUpdateManager(@version)
     @applicationMenu = new ApplicationMenu(@version)
-    @atomProtocolHandler = new AtomProtocolHandler(@resourcePath)
+    @atomProtocolHandler = new AtomProtocolHandler(@resourcePath, @safeMode)
 
     @listenForArgumentsFromNewProcess()
     @setupJavaScriptArguments()
@@ -99,9 +97,16 @@ class AtomApplication
   # Public: Adds the {AtomWindow} to the global window list.
   addWindow: (window) ->
     @windows.push window
-    @applicationMenu?.enableWindowSpecificItems(true)
+    @applicationMenu?.addWindow(window.browserWindow)
     window.once 'window:loaded', =>
       @autoUpdateManager.emitUpdateAvailableEvent(window)
+
+    unless window.isSpec
+      focusHandler = => @lastFocusedWindow = window
+      window.browserWindow.on 'focus', focusHandler
+      window.browserWindow.once 'closed', =>
+        @lastFocusedWindow = null if window is @lastFocusedWindow
+        window.browserWindow.removeListener 'focus', focusHandler
 
   # Creates server to listen for additional atom application launches.
   #
@@ -135,22 +140,32 @@ class AtomApplication
 
   # Registers basic application commands, non-idempotent.
   handleEvents: ->
+    getLoadSettings = =>
+      devMode: @focusedWindow()?.devMode
+      safeMode: @focusedWindow()?.safeMode
+
     @on 'application:run-all-specs', -> @runSpecs(exitWhenDone: false, resourcePath: global.devResourcePath, safeMode: @focusedWindow()?.safeMode)
     @on 'application:run-benchmarks', -> @runBenchmarks()
     @on 'application:quit', -> app.quit()
-    @on 'application:new-window', -> @openPath(windowDimensions: @focusedWindow()?.getDimensions())
+    @on 'application:new-window', -> @openPath(_.extend(windowDimensions: @focusedWindow()?.getDimensions(), getLoadSettings()))
     @on 'application:new-file', -> (@focusedWindow() ? this).openPath()
-    @on 'application:open', -> @promptForPath(type: 'all')
-    @on 'application:open-file', -> @promptForPath(type: 'file')
-    @on 'application:open-folder', -> @promptForPath(type: 'folder')
+    @on 'application:open', -> @promptForPath(_.extend(type: 'all', getLoadSettings()))
+    @on 'application:open-file', -> @promptForPath(_.extend(type: 'file', getLoadSettings()))
+    @on 'application:open-folder', -> @promptForPath(_.extend(type: 'folder', getLoadSettings()))
     @on 'application:open-dev', -> @promptForPath(devMode: true)
     @on 'application:open-safe', -> @promptForPath(safeMode: true)
     @on 'application:inspect', ({x,y, atomWindow}) ->
       atomWindow ?= @focusedWindow()
       atomWindow?.browserWindow.inspectElement(x, y)
 
-    @on 'application:open-documentation', -> shell.openExternal('https://atom.io/docs/latest/?app')
-    @on 'application:open-terms-of-use', -> shell.openExternal('https://atom.io/terms')
+    @on 'application:open-documentation', -> require('shell').openExternal('https://atom.io/docs/latest/?app')
+    @on 'application:open-discussions', -> require('shell').openExternal('https://discuss.atom.io')
+    @on 'application:open-roadmap', -> require('shell').openExternal('https://atom.io/roadmap?app')
+    @on 'application:open-faq', -> require('shell').openExternal('https://atom.io/faq')
+    @on 'application:open-terms-of-use', -> require('shell').openExternal('https://atom.io/terms')
+    @on 'application:report-issue', -> require('shell').openExternal('https://github.com/atom/atom/issues/new')
+    @on 'application:search-issues', -> require('shell').openExternal('https://github.com/issues?q=+is%3Aissue+user%3Aatom')
+
     @on 'application:install-update', -> @autoUpdateManager.install()
     @on 'application:check-for-update', => @autoUpdateManager.check()
 
@@ -199,16 +214,19 @@ class AtomApplication
 
     # A request from the associated render process to open a new render process.
     ipc.on 'open', (event, options) =>
+      window = @windowForEvent(event)
       if options?
         if options.pathsToOpen?.length > 0
+          options.window = window
           @openPaths(options)
         else
           new AtomWindow(options)
       else
-        @promptForPath()
+        @promptForPath({window})
 
     ipc.on 'update-application-menu', (event, template, keystrokesByCommand) =>
-      @applicationMenu.update(template, keystrokesByCommand)
+      win = BrowserWindow.fromWebContents(event.sender)
+      @applicationMenu.update(win, template, keystrokesByCommand)
 
     ipc.on 'run-package-specs', (event, specDirectory) =>
       @runSpecs({resourcePath: global.devResourcePath, specDirectory: specDirectory, exitWhenDone: false})
@@ -223,6 +241,11 @@ class AtomApplication
     ipc.on 'call-window-method', (event, method, args...) ->
       win = BrowserWindow.fromWebContents(event.sender)
       win[method](args...)
+
+    clipboard = null
+    ipc.on 'write-text-to-selection-clipboard', (event, selectedText) ->
+      clipboard ?= require 'clipboard'
+      clipboard.writeText(selectedText, 'selection')
 
   # Public: Executes the given command.
   #
@@ -281,8 +304,12 @@ class AtomApplication
 
   # Returns the {AtomWindow} for the given path.
   windowForPath: (pathToOpen) ->
-    for atomWindow in @windows
-      return atomWindow if atomWindow.containsPath(pathToOpen)
+    _.find @windows, (atomWindow) -> atomWindow.containsPath(pathToOpen)
+
+  # Returns the {AtomWindow} for the given ipc event.
+  windowForEvent: ({sender}) ->
+    window = BrowserWindow.fromWebContents(sender)
+    _.find @windows, ({browserWindow}) -> window is browserWindow
 
   # Public: Returns the currently focused {AtomWindow} or undefined if none.
   focusedWindow: ->
@@ -296,9 +323,10 @@ class AtomApplication
   #   :newWindow - Boolean of whether this should be opened in a new window.
   #   :devMode - Boolean to control the opened window's dev mode.
   #   :safeMode - Boolean to control the opened window's safe mode.
-  openPaths: ({pathsToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode}) ->
+  #   :window - {AtomWindow} to open file paths in.
+  openPaths: ({pathsToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode, window}) ->
     for pathToOpen in pathsToOpen ? []
-      @openPath({pathToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode})
+      @openPath({pathToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode, window})
 
   # Public: Opens a single path, in an existing window if possible.
   #
@@ -309,15 +337,33 @@ class AtomApplication
   #   :devMode - Boolean to control the opened window's dev mode.
   #   :safeMode - Boolean to control the opened window's safe mode.
   #   :windowDimensions - Object with height and width keys.
-  openPath: ({pathToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode, windowDimensions}={}) ->
+  #   :window - {AtomWindow} to open file paths in.
+  openPath: ({pathToOpen, pidToKillWhenClosed, newWindow, devMode, safeMode, windowDimensions, window}={}) ->
     {pathToOpen, initialLine, initialColumn} = @locationForPathToOpen(pathToOpen)
 
-    unless devMode
-      existingWindow = @windowForPath(pathToOpen) unless pidToKillWhenClosed or newWindow
-    if existingWindow
+    unless pidToKillWhenClosed or newWindow
+      pathToOpenStat = fs.statSyncNoException(pathToOpen)
+
+      # Default to using the specified window or the last focused window
+      currentWindow = window ? @lastFocusedWindow
+
+      if pathToOpenStat.isFile?()
+        # Open the file in the current window
+        existingWindow = currentWindow
+      else if pathToOpenStat.isDirectory?()
+        # Open the folder in the current window if it doesn't have a path
+        existingWindow = currentWindow unless currentWindow?.hasProjectPath()
+
+      # Don't reuse windows in dev mode
+      existingWindow ?= @windowForPath(pathToOpen) unless devMode
+
+    if existingWindow?
       openedWindow = existingWindow
-      openedWindow.openPath(pathToOpen, initialLine)
-      openedWindow.restore()
+      openedWindow.openPath(pathToOpen, initialLine, initialColumn)
+      if openedWindow.isMinimized()
+        openedWindow.restore()
+      else
+        openedWindow.focus()
     else
       if devMode
         try
@@ -331,7 +377,7 @@ class AtomApplication
     if pidToKillWhenClosed?
       @pidsToOpenWindows[pidToKillWhenClosed] = openedWindow
 
-    openedWindow.browserWindow.on 'closed', =>
+    openedWindow.browserWindow.once 'closed', =>
       @killProcessForWindow(openedWindow)
 
   # Kill all processes associated with opened windows.
@@ -346,10 +392,11 @@ class AtomApplication
   # Kill the process with the given pid.
   killProcess: (pid) ->
     try
-      process.kill(pid)
+      parsedPid = parseInt(pid)
+      process.kill(parsedPid) if isFinite(parsedPid)
     catch error
       if error.code isnt 'ESRCH'
-        console.log("Killing process #{pid} failed: #{error.code}")
+        console.log("Killing process #{pid} failed: #{error.code ? error.message}")
     delete @pidsToOpenWindows[pid]
 
   # Open an atom:// url.
@@ -444,7 +491,8 @@ class AtomApplication
   #              should be in dev mode or not.
   #   :safeMode - A Boolean which controls whether any newly opened windows
   #               should be in safe mode or not.
-  promptForPath: ({type, devMode, safeMode}={}) ->
+  #   :window - An {AtomWindow} to use for opening a selected file path.
+  promptForPath: ({type, devMode, safeMode, window}={}) ->
     type ?= 'all'
     properties =
       switch type
@@ -452,5 +500,23 @@ class AtomApplication
         when 'folder' then ['openDirectory']
         when 'all' then ['openFile', 'openDirectory']
         else throw new Error("#{type} is an invalid type for promptForPath")
-    dialog.showOpenDialog title: 'Open', properties: properties.concat(['multiSelections', 'createDirectory']), (pathsToOpen) =>
-      @openPaths({pathsToOpen, devMode, safeMode})
+
+    # Show the open dialog as child window on Windows and Linux, and as
+    # independent dialog on OS X. This matches most native apps.
+    parentWindow =
+      if process.platform is 'darwin'
+        null
+      else
+        BrowserWindow.getFocusedWindow()
+
+    openOptions =
+      properties: properties.concat(['multiSelections', 'createDirectory'])
+      title: 'Open'
+
+    if process.platform is 'linux'
+      if projectPath = @lastFocusedWindow?.projectPath
+        openOptions.defaultPath = projectPath
+
+    dialog = require 'dialog'
+    dialog.showOpenDialog parentWindow, openOptions, (pathsToOpen) =>
+      @openPaths({pathsToOpen, devMode, safeMode, window})
